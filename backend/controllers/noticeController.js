@@ -49,7 +49,9 @@ exports.deleteNotice = async (req, res) => {
         let notice = await Notice.findById(req.params.id);
         if (!notice) return res.status(404).json({ msg: 'Notice not found' });
 
-        await Notice.findByIdAndRemove(req.params.id);
+        // --- THIS IS THE FIX ---
+        await Notice.findByIdAndDelete(req.params.id);
+
         res.json({ msg: 'Notice removed' });
     } catch (err) {
         res.status(500).json({ msg: 'Server Error' });
