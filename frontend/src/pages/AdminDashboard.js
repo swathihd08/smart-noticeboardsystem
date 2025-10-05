@@ -122,7 +122,7 @@ const AdminDashboard = () => {
                     <Form onSubmit={handleSubmit}>
                         <Form.Group controlId="title">
                             <Form.Label>Title</Form.Label>
-                            <Form.Control type="text" value={currentNotice.title} onChange={(e) => setCurrentNotice({ ...currentNotice, title: e.g., value })} required />
+                            <Form.Control type="text" value={currentNotice.title} onChange={(e) => setCurrentNotice({ ...currentNotice, title: e.target.value })} required />
                         </Form.Group>
                         <Form.Group controlId="content" className="mt-2">
                             <Form.Label>Content</Form.Label>
