@@ -1,34 +1,40 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Table, Button, Form, Modal } from 'react-bootstrap';
 import axios from 'axios';
-import AuthContext from '../context/AuthContext';
+import AuthContext from '../context/AuthContext'; // Make sure this is imported
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
+    // ... (keep the existing useState hooks)
     const [notices, setNotices] = useState([]);
     const [show, setShow] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentNotice, setCurrentNotice] = useState({ _id: '', title: '', content: '' });
 
-    const { user } = useContext(AuthContext);
+
+    const { user } = useContext(AuthContext); // Get user from context
     const navigate = useNavigate();
 
     const API_URL = `${process.env.REACT_APP_API_URL}/notices`;
 
+    // ... (keep the useEffect hook)
     useEffect(() => {
         if (!user || user.role !== 'admin') {
             navigate('/login');
         } else {
+            const fetchNotices = async () => {
+                const config = {
+                    headers: { Authorization: `Bearer ${user.token}` }
+                };
+                const { data } = await axios.get(API_URL, config);
+                setNotices(data);
+            };
             fetchNotices();
         }
-    }, [user, navigate]);
+    }, [user, navigate, API_URL]);
 
-    const fetchNotices = async () => {
-        const config = { headers: { Authorization: `Bearer ${user.token}` } };
-        const { data } = await axios.get(API_URL, config);
-        setNotices(data);
-    };
 
+    // ... (keep handleClose, handleShow, handleEdit)
     const handleClose = () => {
         setShow(false);
         setIsEditing(false);
@@ -43,27 +49,40 @@ const AdminDashboard = () => {
         handleShow();
     };
 
+
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this notice?')) {
+            // --- ADD TOKEN CONFIG HERE ---
             const config = { headers: { Authorization: `Bearer ${user.token}` } };
             await axios.delete(`${API_URL}/${id}`, config);
-            fetchNotices();
+            // Re-fetch notices after delete
+            const { data } = await axios.get(API_URL, config);
+            setNotices(data);
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` } };
+        // --- ADD TOKEN CONFIG HERE ---
+        const config = {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${user.token}`,
+            },
+        };
         
         if (isEditing) {
             await axios.put(`${API_URL}/${currentNotice._id}`, { title: currentNotice.title, content: currentNotice.content }, config);
         } else {
             await axios.post(API_URL, { title: currentNotice.title, content: currentNotice.content }, config);
         }
-        fetchNotices();
+        // Re-fetch notices after submit
+        const { data } = await axios.get(API_URL, config);
+        setNotices(data);
         handleClose();
     };
 
+    // ... (keep the return JSX)
     return (
         <>
             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -103,7 +122,7 @@ const AdminDashboard = () => {
                     <Form onSubmit={handleSubmit}>
                         <Form.Group controlId="title">
                             <Form.Label>Title</Form.Label>
-                            <Form.Control type="text" value={currentNotice.title} onChange={(e) => setCurrentNotice({ ...currentNotice, title: e.target.value })} required />
+                            <Form.Control type="text" value={currentNotice.title} onChange={(e) => setCurrentNotice({ ...currentNotice, title: e.g., value })} required />
                         </Form.Group>
                         <Form.Group controlId="content" className="mt-2">
                             <Form.Label>Content</Form.Label>
