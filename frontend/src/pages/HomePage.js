@@ -20,6 +20,7 @@ useEffect(() => {
             };
             // --- MAKE SURE 'config' IS INCLUDED IN THE LINE BELOW ---
             const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/notices`, config);
+            setNotices(data);
         };
         fetchNotices();
     }
