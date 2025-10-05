@@ -10,19 +10,19 @@ const HomePage = () => {
     const navigate = useNavigate();
     
     useEffect(() => {
-        if (!user) {
-            navigate('/login');
-        } else {
-            const fetchNotices = async () => {
-                const config = {
-                    headers: { Authorization: `Bearer ${user.token}` }
-                };
-                const { data } = await axios.get('http://localhost:5000/api/notices', config);
-                setNotices(data);
+    if (!user) {
+        navigate('/login');
+    } else {
+        const fetchNotices = async () => {
+            // --- THIS CONFIG OBJECT IS CRUCIAL ---
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` }
             };
-            fetchNotices();
-        }
-    }, [user, navigate]);
+           const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/notices`, config);
+        };
+        fetchNotices();
+    }
+}, [user, navigate]);
 
     return (
         <>
