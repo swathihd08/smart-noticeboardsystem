@@ -9,7 +9,7 @@ const HomePage = () => {
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();
     
-    useEffect(() => {
+useEffect(() => {
     if (!user) {
         navigate('/login');
     } else {
@@ -18,7 +18,9 @@ const HomePage = () => {
             const config = {
                 headers: { Authorization: `Bearer ${user.token}` }
             };
-           const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/notices`, config);
+            // --- MAKE SURE 'config' IS INCLUDED IN THE LINE BELOW ---
+            const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/notices`, config);
+            setNotices(data);
         };
         fetchNotices();
     }
