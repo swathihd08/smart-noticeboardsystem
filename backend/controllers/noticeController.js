@@ -42,18 +42,24 @@ exports.updateNotice = async (req, res) => {
     }
 };
 
-// @desc    Delete a notice
-// @route   DELETE /api/notices/:id
 exports.deleteNotice = async (req, res) => {
     try {
-        let notice = await Notice.findById(req.params.id);
-        if (!notice) return res.status(404).json({ msg: 'Notice not found' });
+        const notice = await Notice.findById(req.params.id);
 
-        // --- THIS IS THE FIX ---
+        if (!notice) {
+            return res.status(404).json({ msg: 'Notice not found' });
+        }
+
+        // --- SMART CHECK ---
+        // Check if the user is the "Author" of the notice OR is an "Admin"
+        if (notice.author.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(401).json({ msg: 'Not authorized to delete this notice' });
+        }
+
         await Notice.findByIdAndDelete(req.params.id);
-
         res.json({ msg: 'Notice removed' });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: 'Server Error' });
     }
 };

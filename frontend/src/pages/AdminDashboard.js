@@ -107,13 +107,20 @@ const AdminDashboard = () => {
                             <td>{notice.content}</td>
                             <td>{new Date(notice.createdAt).toLocaleDateString()}</td>
                             <td>
-                                <Button variant="light" className="btn-sm me-2" onClick={() => handleEdit(notice)}>Edit</Button>
-                                
-                                {/* Only Admin can delete, Faculty cannot */}
-                                {user.role === 'admin' && (
-                                    <Button variant="danger" className="btn-sm" onClick={() => handleDelete(notice._id)}>Delete</Button>
-                                )}
-                            </td>
+    {/* Edit button (You can keep this restricted or open it up similarly) */}
+    <Button variant="light" className="btn-sm me-2" onClick={() => handleEdit(notice)}>Edit</Button>
+    
+    {/* Delete Button Logic: Show if User is Admin OR User is the Author */}
+    {(user.role === 'admin' || user._id === notice.author) && (
+        <Button 
+            variant="danger" 
+            className="btn-sm" 
+            onClick={() => handleDelete(notice._id)}
+        >
+            Delete
+        </Button>
+    )}
+</td>
                         </tr>
                     ))}
                 </tbody>
