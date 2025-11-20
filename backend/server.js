@@ -26,6 +26,8 @@ app.get('/', (req, res) => {
 });
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/notices', require('./routes/notices'));
+app.use('/api/feedback', require('./routes/feedback')); // <--- ADD THIS LINE
+
 
 const PORT = process.env.PORT || 5000;
 
