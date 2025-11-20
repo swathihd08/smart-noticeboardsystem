@@ -25,15 +25,19 @@ const Header = () => {
                         <Nav className="ms-auto">
                             {user ? (
                                 <NavDropdown title={user.name} id="username">
-                                    {user.role === 'admin' && (
+                                   {/* Check if role is Admin OR Faculty */}
+{(user.role === 'admin' || user.role === 'faculty') && (
     <>
         <LinkContainer to="/admin">
-            <NavDropdown.Item>Admin Dashboard</NavDropdown.Item>
+            <NavDropdown.Item>Manage Notices</NavDropdown.Item>
         </LinkContainer>
 
-        <LinkContainer to="/admin-feedback">
-            <NavDropdown.Item>View Feedback</NavDropdown.Item>
-        </LinkContainer>
+        {/* Only Admins should see Feedback, Faculty doesn't need this */}
+        {user.role === 'admin' && (
+             <LinkContainer to="/admin-feedback">
+                <NavDropdown.Item>View Feedback</NavDropdown.Item>
+            </LinkContainer>
+        )}
     </>
 )}
    

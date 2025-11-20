@@ -1,40 +1,41 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Table, Button, Form, Modal } from 'react-bootstrap';
 import axios from 'axios';
-import AuthContext from '../context/AuthContext'; // Make sure this is imported
+import AuthContext from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
-    // ... (keep the existing useState hooks)
     const [notices, setNotices] = useState([]);
     const [show, setShow] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentNotice, setCurrentNotice] = useState({ _id: '', title: '', content: '' });
 
-
-    const { user } = useContext(AuthContext); // Get user from context
+    const { user } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const API_URL = `${process.env.REACT_APP_API_URL}/notices`;
 
-    // ... (keep the useEffect hook)
     useEffect(() => {
-        if (!user || user.role !== 'admin') {
+        // Allow access if user is Admin OR Faculty
+        if (!user || (user.role !== 'admin' && user.role !== 'faculty')) {
             navigate('/login');
         } else {
-            const fetchNotices = async () => {
-                const config = {
-                    headers: { Authorization: `Bearer ${user.token}` }
-                };
-                const { data } = await axios.get(API_URL, config);
-                setNotices(data);
-            };
             fetchNotices();
         }
-    }, [user, navigate, API_URL]);
+    }, [user, navigate]); // Removed API_URL dependency to prevent loops
 
+    const fetchNotices = async () => {
+        try {
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` }
+            };
+            const { data } = await axios.get(API_URL, config);
+            setNotices(data);
+        } catch (error) {
+            console.error("Error fetching notices", error);
+        }
+    };
 
-    // ... (keep handleClose, handleShow, handleEdit)
     const handleClose = () => {
         setShow(false);
         setIsEditing(false);
@@ -49,40 +50,40 @@ const AdminDashboard = () => {
         handleShow();
     };
 
-
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this notice?')) {
-            // --- ADD TOKEN CONFIG HERE ---
-            const config = { headers: { Authorization: `Bearer ${user.token}` } };
-            await axios.delete(`${API_URL}/${id}`, config);
-            // Re-fetch notices after delete
-            const { data } = await axios.get(API_URL, config);
-            setNotices(data);
+            try {
+                const config = { headers: { Authorization: `Bearer ${user.token}` } };
+                await axios.delete(`${API_URL}/${id}`, config);
+                fetchNotices();
+            } catch (error) {
+                console.error("Failed to delete notice", error);
+            }
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // --- ADD TOKEN CONFIG HERE ---
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${user.token}`,
-            },
-        };
-        
-        if (isEditing) {
-            await axios.put(`${API_URL}/${currentNotice._id}`, { title: currentNotice.title, content: currentNotice.content }, config);
-        } else {
-            await axios.post(API_URL, { title: currentNotice.title, content: currentNotice.content }, config);
+        try {
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${user.token}`,
+                },
+            };
+
+            if (isEditing) {
+                await axios.put(`${API_URL}/${currentNotice._id}`, { title: currentNotice.title, content: currentNotice.content }, config);
+            } else {
+                await axios.post(API_URL, { title: currentNotice.title, content: currentNotice.content }, config);
+            }
+            fetchNotices();
+            handleClose();
+        } catch (error) {
+            console.error("Failed to save notice", error);
         }
-        // Re-fetch notices after submit
-        const { data } = await axios.get(API_URL, config);
-        setNotices(data);
-        handleClose();
     };
 
-    // ... (keep the return JSX)
     return (
         <>
             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -107,7 +108,11 @@ const AdminDashboard = () => {
                             <td>{new Date(notice.createdAt).toLocaleDateString()}</td>
                             <td>
                                 <Button variant="light" className="btn-sm me-2" onClick={() => handleEdit(notice)}>Edit</Button>
-                                <Button variant="danger" className="btn-sm" onClick={() => handleDelete(notice._id)}>Delete</Button>
+                                
+                                {/* Only Admin can delete, Faculty cannot */}
+                                {user.role === 'admin' && (
+                                    <Button variant="danger" className="btn-sm" onClick={() => handleDelete(notice._id)}>Delete</Button>
+                                )}
                             </td>
                         </tr>
                     ))}
@@ -122,11 +127,22 @@ const AdminDashboard = () => {
                     <Form onSubmit={handleSubmit}>
                         <Form.Group controlId="title">
                             <Form.Label>Title</Form.Label>
-                            <Form.Control type="text" value={currentNotice.title} onChange={(e) => setCurrentNotice({ ...currentNotice, title: e.target.value })} required />
+                            <Form.Control 
+                                type="text" 
+                                value={currentNotice.title} 
+                                onChange={(e) => setCurrentNotice({ ...currentNotice, title: e.target.value })} 
+                                required 
+                            />
                         </Form.Group>
                         <Form.Group controlId="content" className="mt-2">
                             <Form.Label>Content</Form.Label>
-                            <Form.Control as="textarea" rows={3} value={currentNotice.content} onChange={(e) => setCurrentNotice({ ...currentNotice, content: e.target.value })} required />
+                            <Form.Control 
+                                as="textarea" 
+                                rows={3} 
+                                value={currentNotice.content} 
+                                onChange={(e) => setCurrentNotice({ ...currentNotice, content: e.target.value })} 
+                                required 
+                            />
                         </Form.Group>
                         <Button variant="primary" type="submit" className="mt-3">
                             {isEditing ? 'Update' : 'Create'}

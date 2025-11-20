@@ -25,3 +25,15 @@ exports.admin = (req, res, next) => {
         res.status(403).json({ msg: 'Not authorized as an admin' });
     }
 };
+// ... existing protect and admin functions ...
+
+const faculty = (req, res, next) => {
+    if (req.user && (req.user.role === 'faculty' || req.user.role === 'admin')) {
+        next();
+    } else {
+        res.status(401).json({ msg: 'Not authorized as faculty' });
+    }
+};
+
+// MAKE SURE THIS LINE IS CORRECT:
+module.exports = { protect, admin, faculty };
