@@ -145,7 +145,7 @@ const HomePage = () => {
                                     {notice.fileUrl && (
                                         <div className="mt-3 mb-2">
                                             <a 
-                                                href={`${BASE_URL}/${notice.fileUrl}`} 
+                                                href={notice.fileUrl}
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
                                                 className="btn btn-sm btn-outline-primary w-100"

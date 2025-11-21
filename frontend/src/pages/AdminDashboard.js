@@ -155,7 +155,7 @@ const AdminDashboard = () => {
                             <td>
                                 {notice.fileUrl ? (
                                     <a 
-                                        href={`${BASE_URL}/${notice.fileUrl}`} 
+                                        href={notice.fileUrl}
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                     >

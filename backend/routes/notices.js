@@ -2,35 +2,35 @@ const express = require('express');
 const router = express.Router();
 const { getNotices, createNotice, updateNotice, deleteNotice } = require('../controllers/noticeController');
 const { protect, admin, faculty } = require('../middleware/authMiddleware');
+
+// --- CLOUDINARY SETUP ---
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const path = require('path');
 
-// --- MULTER CONFIGURATION ---
-const storage = multer.diskStorage({
-    destination(req, file, cb) {
-        cb(null, 'uploads/'); // Files will be saved in an 'uploads' folder
-    },
-    filename(req, file, cb) {
-        cb(null, `${Date.now()}-${file.originalname}`); // Unique filename
+// Configure Cloudinary with your keys
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure Storage
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'college_notices', // The folder name in Cloudinary
+        allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'doc', 'docx'],
+        resource_type: 'auto', // Auto-detect if it's an image or raw file (pdf)
     },
 });
 
-const upload = multer({ 
-    storage,
-    fileFilter: function (req, file, cb) {
-        const filetypes = /jpeg|jpg|png|pdf|doc|docx/; // Allowed file types
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        if (extname) {
-            return cb(null, true);
-        }
-        cb(new Error('Error: Images, PDFs, and Docs only!'));
-    }
-});
-// ---------------------------
+const upload = multer({ storage: storage });
+// ------------------------
 
 router.route('/')
     .get(protect, getNotices)
-    // Add 'upload.single' middleware to handle the file
+    // Use the Cloudinary upload middleware
     .post(protect, faculty, upload.single('noticeFile'), createNotice);
 
 router.route('/:id')
