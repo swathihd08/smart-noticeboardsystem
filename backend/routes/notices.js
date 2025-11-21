@@ -31,11 +31,15 @@ const upload = multer({ storage: storage });
 
 router.route('/')
     .get(protect, getNotices)
-    // Use the Cloudinary upload middleware
-    .post(protect, faculty, upload.single('noticeFile'), createNotice);
-
-router.route('/:id')
-    .put(protect, admin, updateNotice)
-    .delete(protect, faculty, deleteNotice);
-
-module.exports = router;
+    .post(protect, faculty, (req, res, next) => {
+        // Wrap upload in a custom function to catch errors
+        upload.single('noticeFile')(req, res, (err) => {
+            if (err) {
+                // This will print the REAL error to your Render logs
+                console.error("MULTER UPLOAD ERROR:", err); 
+                return res.status(500).json({ msg: 'File Upload Failed', error: err.message });
+            }
+            // If no error, continue to the controller
+            next();
+        });
+    }, createNotice);
