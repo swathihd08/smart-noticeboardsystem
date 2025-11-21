@@ -11,19 +11,24 @@ exports.getNotices = async (req, res) => {
     }
 };
 
-// @desc    Create a notice
-// @route   POST /api/notices
 exports.createNotice = async (req, res) => {
-    const { title, content } = req.body;
+    const { title, content, category } = req.body;
+
+    // Check if a file was uploaded
+    const fileUrl = req.file ? req.file.path : null;
+
     try {
         const newNotice = new Notice({
             title,
             content,
+            category,
+            fileUrl, // Save the file path
             author: req.user.id,
         });
         const notice = await newNotice.save();
         res.json(notice);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: 'Server Error' });
     }
 };

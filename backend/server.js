@@ -30,5 +30,5 @@ app.use('/api/feedback', require('./routes/feedback')); // <--- ADD THIS LINE
 
 
 const PORT = process.env.PORT || 5000;
-
+app.use('/uploads', express.static('uploads'));
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
