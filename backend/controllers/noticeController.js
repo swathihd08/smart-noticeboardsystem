@@ -7,28 +7,35 @@ exports.getNotices = async (req, res) => {
         const notices = await Notice.find().sort({ createdAt: -1 });
         res.json(notices);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ msg: 'Server Error' });
     }
 };
 
+// @desc    Create a notice (Admin & Faculty)
+// @route   POST /api/notices
 exports.createNotice = async (req, res) => {
-    const { title, content, category } = req.body;
-
-    // Check if a file was uploaded
-    const fileUrl = req.file ? req.file.path : null;
-
     try {
+        const { title, content, category } = req.body;
+
+        // Handle File Upload (Cloudinary puts url in req.file.path)
+        let fileUrl = null;
+        if (req.file && req.file.path) {
+            fileUrl = req.file.path;
+        }
+
         const newNotice = new Notice({
             title,
             content,
-            category,
-            fileUrl, // Save the file path
+            category: category || 'General',
+            fileUrl, 
             author: req.user.id,
         });
+
         const notice = await newNotice.save();
         res.json(notice);
     } catch (err) {
-        console.error(err);
+        console.error("Create Notice Error:", err);
         res.status(500).json({ msg: 'Server Error' });
     }
 };
@@ -40,13 +47,15 @@ exports.updateNotice = async (req, res) => {
         let notice = await Notice.findById(req.params.id);
         if (!notice) return res.status(404).json({ msg: 'Notice not found' });
         
-        notice = await Notice.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
-        res.json(notice);
+        const updatedNotice = await Notice.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+        res.json(updatedNotice);
     } catch (err) {
         res.status(500).json({ msg: 'Server Error' });
     }
 };
 
+// @desc    Delete a notice
+// @route   DELETE /api/notices/:id
 exports.deleteNotice = async (req, res) => {
     try {
         const notice = await Notice.findById(req.params.id);
@@ -55,8 +64,7 @@ exports.deleteNotice = async (req, res) => {
             return res.status(404).json({ msg: 'Notice not found' });
         }
 
-        // --- SMART CHECK ---
-        // Check if the user is the "Author" of the notice OR is an "Admin"
+        // Check if User is Author OR Admin
         if (notice.author.toString() !== req.user.id && req.user.role !== 'admin') {
             return res.status(401).json({ msg: 'Not authorized to delete this notice' });
         }
