@@ -87,6 +87,9 @@ const AdminDashboard = () => {
                 formData.append('title', currentNotice.title);
                 formData.append('content', currentNotice.content);
                 formData.append('category', currentNotice.category);
+                console.log("🚀 FRONTEND DEBUG:");
+    console.log("Title:", currentNotice.title);
+    console.log("File State:", file); // Is this null?
                 if (file) {
                     formData.append('noticeFile', file);
                 }
