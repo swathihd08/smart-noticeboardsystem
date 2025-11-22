@@ -13,15 +13,43 @@ const generateToken = (id) => {
 const sendEmail = async (options) => {
    // Helper: Send Email Function
 const sendEmail = async (options) => {
-   const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,               // <--- Use SSL Port
-        secure: true,            // <--- Must be true for port 465
+  // Helper: Send Email Function
+const sendEmail = async (options) => {
+    // 1. Create Transporter
+    const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // Use SSL
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
         },
+        // This is the "Magic Fix" for cloud servers like Render
+        tls: {
+            rejectUnauthorized: false
+        }
     });
+
+    // 2. Verify Connection (Debug Step)
+    try {
+        await transporter.verify();
+        console.log("✅ SMTP Connection Established Successfully");
+    } catch (error) {
+        console.error("🔴 SMTP Connection Failed:", error);
+        throw new Error("Could not connect to Gmail");
+    }
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: options.email,
+        subject: options.subject,
+        text: options.message,
+    };
+
+    // 3. Send Mail
+    await transporter.sendMail(mailOptions);
+    console.log("✅ Email sent to:", options.email);
+};
 
     const mailOptions = {
         from: process.env.EMAIL_USER,
