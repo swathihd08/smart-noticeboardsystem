@@ -11,15 +11,32 @@ const generateToken = (id) => {
 
 // Helper: Send Email Function
 const sendEmail = async (options) => {
+   // Helper: Send Email Function
+const sendEmail = async (options) => {
     const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // Explicit host
-    port: 587,              // Standard secure port for cloud servers
-    secure: false,          // Use TLS (True is for port 465)
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+        host: "smtp.gmail.com",  // <--- Explicit Host
+        port: 587,               // <--- Standard Secure Port
+        secure: false,           // <--- False for port 587
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+        tls: {
+            rejectUnauthorized: false // <--- Fixes some cloud SSL issues
+        }
+    });
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: options.email,
+        subject: options.subject,
+        text: options.message,
+    };
+
+    console.log("🔹 Sending mail via SMTP..."); // Debug log
+    await transporter.sendMail(mailOptions);
+    console.log("✅ Mail sent!");
+};
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: options.email,
