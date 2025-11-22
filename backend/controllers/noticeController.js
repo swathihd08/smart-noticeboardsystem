@@ -1,47 +1,70 @@
 const Notice = require('../models/Notice');
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary directly here
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // @desc    Get all notices
-// @route   GET /api/notices
 exports.getNotices = async (req, res) => {
     try {
         const notices = await Notice.find().sort({ createdAt: -1 });
         res.json(notices);
     } catch (err) {
-        console.error(err);
         res.status(500).json({ msg: 'Server Error' });
     }
 };
 
-// @desc    Create a notice (Admin & Faculty)
-// @route   POST /api/notices
+// @desc    Create a notice
 exports.createNotice = async (req, res) => {
-    try {
-        const { title, content, category } = req.body;
+    const { title, content, category } = req.body;
+    let fileUrl = null;
 
-        // Handle File Upload (Cloudinary puts url in req.file.path)
-        let fileUrl = null;
-        if (req.file && req.file.path) {
-            fileUrl = req.file.path;
+    try {
+        // --- FILE UPLOAD LOGIC ---
+        if (req.file) {
+            console.log("🔹 Processing File Upload...");
+            
+            // Convert buffer to Base64 string
+            const b64 = Buffer.from(req.file.buffer).toString('base64');
+            let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+
+            // Upload to Cloudinary
+            const result = await cloudinary.uploader.upload(dataURI, {
+                folder: 'college_notices',
+                resource_type: 'auto'
+            });
+            
+            console.log("✅ Upload Success:", result.secure_url);
+            fileUrl = result.secure_url;
         }
+        // -------------------------
 
         const newNotice = new Notice({
             title,
             content,
             category: category || 'General',
-            fileUrl, 
+            fileUrl, // Save the URL (or null if no file)
             author: req.user.id,
         });
 
         const notice = await newNotice.save();
         res.json(notice);
+
     } catch (err) {
-        console.error("Create Notice Error:", err);
-        res.status(500).json({ msg: 'Server Error' });
+        console.error("🔴 CREATE NOTICE ERROR:", err);
+        // Send the EXACT error to the frontend
+        res.status(500).json({ 
+            msg: 'Creation Failed', 
+            error: err.message || 'Unknown Error' 
+        });
     }
 };
 
 // @desc    Update a notice
-// @route   PUT /api/notices/:id
 exports.updateNotice = async (req, res) => {
     try {
         let notice = await Notice.findById(req.params.id);
@@ -55,16 +78,11 @@ exports.updateNotice = async (req, res) => {
 };
 
 // @desc    Delete a notice
-// @route   DELETE /api/notices/:id
 exports.deleteNotice = async (req, res) => {
     try {
         const notice = await Notice.findById(req.params.id);
+        if (!notice) return res.status(404).json({ msg: 'Notice not found' });
 
-        if (!notice) {
-            return res.status(404).json({ msg: 'Notice not found' });
-        }
-
-        // Check if User is Author OR Admin
         if (notice.author.toString() !== req.user.id && req.user.role !== 'admin') {
             return res.status(401).json({ msg: 'Not authorized to delete this notice' });
         }
@@ -72,7 +90,6 @@ exports.deleteNotice = async (req, res) => {
         await Notice.findByIdAndDelete(req.params.id);
         res.json({ msg: 'Notice removed' });
     } catch (err) {
-        console.error(err);
         res.status(500).json({ msg: 'Server Error' });
     }
 };
