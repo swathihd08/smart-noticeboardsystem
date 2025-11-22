@@ -6,9 +6,12 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminDashboard from './pages/AdminDashboard';
-import { AuthProvider } from './context/AuthContext';
 import FeedbackPage from './pages/FeedbackPage';
 import AdminFeedbackPage from './pages/AdminFeedbackPage';
+// Import the new pages
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
@@ -23,7 +26,11 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/feedback" element={<FeedbackPage />} />
-  <Route path="/admin-feedback" element={<AdminFeedbackPage />} />
+              <Route path="/admin-feedback" element={<AdminFeedbackPage />} />
+              
+              {/* --- NEW ROUTES --- */}
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password/:resetToken" element={<ResetPasswordPage />} />
             </Routes>
           </Container>
         </main>
