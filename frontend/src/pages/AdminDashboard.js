@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Table, Button, Form, Modal, Badge } from 'react-bootstrap';
+import { Table, Button, Form, Modal, Badge, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -8,27 +8,20 @@ const AdminDashboard = () => {
     const [notices, setNotices] = useState([]);
     const [show, setShow] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [uploading, setUploading] = useState(false); // Loading state
     
-    // Updated default category
     const [currentNotice, setCurrentNotice] = useState({ 
-        _id: '', 
-        title: '', 
-        content: '', 
-        category: 'Academics' 
+        _id: '', title: '', content: '', category: 'Academics' 
     });
     
-    // New state for file
     const [file, setFile] = useState(null);
 
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const API_URL = `${process.env.REACT_APP_API_URL}/notices`;
-    // Helper to get the base URL (e.g., http://localhost:5000) for file links
-    const BASE_URL = process.env.REACT_APP_API_URL.replace('/api', '');
 
     useEffect(() => {
-        // Allow access if user is Admin OR Faculty
         if (!user || (user.role !== 'admin' && user.role !== 'faculty')) {
             navigate('/login');
         } else {
@@ -38,20 +31,17 @@ const AdminDashboard = () => {
 
     const fetchNotices = async () => {
         try {
-            const config = {
-                headers: { Authorization: `Bearer ${user.token}` }
-            };
+            const config = { headers: { Authorization: `Bearer ${user.token}` } };
             const { data } = await axios.get(API_URL, config);
             setNotices(data);
-        } catch (error) {
-            console.error("Error fetching notices", error);
-        }
+        } catch (error) { console.error(error); }
     };
 
     const handleClose = () => {
         setShow(false);
         setIsEditing(false);
-        setFile(null); // Reset file
+        setFile(null);
+        setUploading(false);
         setCurrentNotice({ _id: '', title: '', content: '', category: 'Academics' });
     };
 
@@ -60,74 +50,81 @@ const AdminDashboard = () => {
     const handleEdit = (notice) => {
         setCurrentNotice(notice);
         setIsEditing(true);
-        setFile(null); // Reset file on edit start
         handleShow();
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this notice?')) {
+        if (window.confirm('Delete this notice?')) {
             try {
                 const config = { headers: { Authorization: `Bearer ${user.token}` } };
                 await axios.delete(`${API_URL}/${id}`, config);
                 fetchNotices();
-            } catch (error) {
-                console.error("Failed to delete notice", error);
-                alert("You are not authorized to delete this notice.");
-            }
+            } catch (error) { alert("Delete failed"); }
+        }
+    };
+
+    // --- NEW UPLOAD LOGIC ---
+    const uploadFileToCloudinary = async () => {
+        if (!file) return null;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'college_preset'); // MUST MATCH YOUR CLOUDINARY SETTING
+        formData.append('cloud_name', 'dyiz54vhg'); // YOUR CLOUD NAME
+
+        try {
+            setUploading(true);
+            const res = await axios.post(
+                'https://api.cloudinary.com/v1_1/dyiz54vhg/auto/upload', // YOUR CLOUD URL
+                formData
+            );
+            setUploading(false);
+            return res.data.secure_url; // Return the link
+        } catch (error) {
+            setUploading(false);
+            console.error("Cloudinary Upload Error:", error);
+            alert("File upload failed!");
+            return null;
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
+        let fileUrl = currentNotice.fileUrl; // Keep existing URL if editing
+
+        // 1. Upload File First (if selected)
+        if (file) {
+            fileUrl = await uploadFileToCloudinary();
+            if (!fileUrl) return; // Stop if upload failed
+        }
+
+        // 2. Send Data to Backend
+        const noticeData = {
+            title: currentNotice.title,
+            content: currentNotice.content,
+            category: currentNotice.category,
+            fileUrl: fileUrl // Send the link, not the file
+        };
+
+        const config = {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${user.token}`,
+            },
+        };
+
         try {
-            // CREATE MODE (With File Support)
-            if (!isEditing) {
-                const formData = new FormData();
-                formData.append('title', currentNotice.title);
-                formData.append('content', currentNotice.content);
-                formData.append('category', currentNotice.category);
-                console.log("🚀 FRONTEND DEBUG:");
-    console.log("Title:", currentNotice.title);
-    console.log("File State:", file); // Is this null?
-                if (file) {
-                    formData.append('noticeFile', file);
-                }
-
-                const config = {
-                    headers: {
-                        'Content-Type': 'multipart/form-data', // Crucial for files
-                        Authorization: `Bearer ${user.token}`,
-                    },
-                };
-                
-                await axios.post(API_URL, formData, config);
-            } 
-            // UPDATE MODE (Text only for simplicity)
-            else {
-                const config = {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${user.token}`,
-                    },
-                };
-                
-                await axios.put(
-                    `${API_URL}/${currentNotice._id}`, 
-                    { 
-                        title: currentNotice.title, 
-                        content: currentNotice.content, 
-                        category: currentNotice.category 
-                    }, 
-                    config
-                );
+            if (isEditing) {
+                await axios.put(`${API_URL}/${currentNotice._id}`, noticeData, config);
+            } else {
+                await axios.post(API_URL, noticeData, config);
             }
-
             fetchNotices();
             handleClose();
         } catch (error) {
-            console.error("Failed to save notice", error);
-            alert("Failed to save notice. Please try again.");
+            console.error("Save Error:", error);
+            alert("Failed to save notice.");
         }
     };
 
@@ -145,36 +142,24 @@ const AdminDashboard = () => {
                         <th>Title</th>
                         <th>Content</th>
                         <th>Attachment</th>
-                        <th>Created At</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {notices.map((notice) => (
                         <tr key={notice._id}>
-                            <td><Badge bg="info">{notice.category || 'General'}</Badge></td>
+                            <td><Badge bg="info">{notice.category}</Badge></td>
                             <td>{notice.title}</td>
                             <td>{notice.content.substring(0, 50)}...</td>
                             <td>
-                                {notice.fileUrl ? (
-                                    <a 
-                                        href={notice.fileUrl}
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                    >
-                                        View File 📎
-                                    </a>
-                                ) : (
-                                    <span className="text-muted">None</span>
-                                )}
+                                {notice.fileUrl ? 
+                                    <a href={notice.fileUrl} target="_blank" rel="noreferrer">View 📎</a> 
+                                    : 'None'}
                             </td>
-                            <td>{new Date(notice.createdAt).toLocaleDateString()}</td>
                             <td>
-                                <Button variant="light" className="btn-sm me-2" onClick={() => handleEdit(notice)}>Edit</Button>
-                                
-                                {/* Delete Logic: Show if Admin OR if User matches Author */}
-                                {(user.role === 'admin' || (user._id && notice.author && user._id === notice.author)) && (
-                                    <Button variant="danger" className="btn-sm" onClick={() => handleDelete(notice._id)}>Delete</Button>
+                                <Button variant="light" size="sm" className="me-2" onClick={() => handleEdit(notice)}>Edit</Button>
+                                {(user.role === 'admin' || user._id === notice.author) && (
+                                    <Button variant="danger" size="sm" onClick={() => handleDelete(notice._id)}>Delete</Button>
                                 )}
                             </td>
                         </tr>
@@ -188,55 +173,37 @@ const AdminDashboard = () => {
                 </Modal.Header>
                 <Modal.Body>
                     <Form onSubmit={handleSubmit}>
-                        <Form.Group controlId="title">
+                        <Form.Group className="mb-3">
                             <Form.Label>Title</Form.Label>
-                            <Form.Control 
-                                type="text" 
-                                value={currentNotice.title} 
-                                onChange={(e) => setCurrentNotice({ ...currentNotice, title: e.target.value })} 
-                                required 
-                            />
+                            <Form.Control type="text" value={currentNotice.title} onChange={(e) => setCurrentNotice({...currentNotice, title: e.target.value})} required />
                         </Form.Group>
-
-                        <Form.Group controlId="category" className="mt-2">
+                        <Form.Group className="mb-3">
                             <Form.Label>Category</Form.Label>
-                            <Form.Select 
-                                value={currentNotice.category} 
-                                onChange={(e) => setCurrentNotice({ ...currentNotice, category: e.target.value })}
-                            >
-                                <option value="Academics">Academics</option>
-                                <option value="Events">Events</option>
-                                <option value="Placements">Placements</option>
-                                <option value="Exams">Exams</option>
-                                <option value="Holidays">Holidays</option>
-                                <option value="Emergency Alerts">Emergency Alerts</option>
+                            <Form.Select value={currentNotice.category} onChange={(e) => setCurrentNotice({...currentNotice, category: e.target.value})}>
+                                <option>Academics</option>
+                                <option>Events</option>
+                                <option>Exams</option>
+                                <option>Placements</option>
+                                <option>Holidays</option>
+                                <option>Emergency Alerts</option>
+                                <option>Sports</option>
+                                <option>Library</option>
                             </Form.Select>
                         </Form.Group>
-
-                        <Form.Group controlId="content" className="mt-2">
+                        <Form.Group className="mb-3">
                             <Form.Label>Content</Form.Label>
-                            <Form.Control 
-                                as="textarea" 
-                                rows={3} 
-                                value={currentNotice.content} 
-                                onChange={(e) => setCurrentNotice({ ...currentNotice, content: e.target.value })} 
-                                required 
-                            />
+                            <Form.Control as="textarea" rows={3} value={currentNotice.content} onChange={(e) => setCurrentNotice({...currentNotice, content: e.target.value})} required />
                         </Form.Group>
-
-                        {/* File Upload - Only show in Create mode to keep it simple */}
+                        
                         {!isEditing && (
-                            <Form.Group controlId="file" className="mt-2">
-                                <Form.Label>Attach File (PDF/Image)</Form.Label>
-                                <Form.Control 
-                                    type="file" 
-                                    onChange={(e) => setFile(e.target.files[0])} 
-                                />
+                            <Form.Group className="mb-3">
+                                <Form.Label>Attach File</Form.Label>
+                                <Form.Control type="file" onChange={(e) => setFile(e.target.files[0])} />
                             </Form.Group>
                         )}
 
-                        <Button variant="primary" type="submit" className="mt-3">
-                            {isEditing ? 'Update' : 'Create'}
+                        <Button variant="primary" type="submit" disabled={uploading}>
+                            {uploading ? <Spinner animation="border" size="sm" /> : (isEditing ? 'Update' : 'Create')}
                         </Button>
                     </Form>
                 </Modal.Body>
