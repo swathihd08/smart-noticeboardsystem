@@ -12,13 +12,14 @@ const generateToken = (id) => {
 // Helper: Send Email Function
 const sendEmail = async (options) => {
     const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
-
+    host: 'smtp.gmail.com', // Explicit host
+    port: 587,              // Standard secure port for cloud servers
+    secure: false,          // Use TLS (True is for port 465)
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: options.email,
