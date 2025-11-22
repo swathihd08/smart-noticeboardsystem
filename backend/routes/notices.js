@@ -3,61 +3,57 @@ const router = express.Router();
 const { getNotices, createNotice, updateNotice, deleteNotice } = require('../controllers/noticeController');
 const { protect, admin, faculty } = require('../middleware/authMiddleware');
 
-// --- CLOUDINARY SETUP ---
+// --- CLOUDINARY & MULTER SETUP ---
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
+const streamifier = require('streamifier'); // We will use the built-in stream capabilities
 
-// --- DETECTIVE LOGS (Debug Check) ---
-console.log("---------------------------------------");
-console.log("🕵️ DETECTIVE CHECK IN NOTICES.JS:");
-console.log("Cloud Name:", process.env.CLOUDINARY_CLOUD_NAME);
-// We only print the first 4 characters for security
-console.log("API Key starts with:", process.env.CLOUDINARY_API_KEY ? process.env.CLOUDINARY_API_KEY.substring(0, 4) : "MISSING");
-console.log("API Secret starts with:", process.env.CLOUDINARY_API_SECRET ? process.env.CLOUDINARY_API_SECRET.substring(0, 4) : "MISSING");
-console.log("---------------------------------------");
-// ------------------------------------
-
-// 1. Configure Cloudinary
-try {
-    cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
-} catch (configError) {
-    console.error("🔴 Cloudinary Config Failed:", configError);
-}
-
-// 2. Configure Storage
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'college_notices',
-        resource_type: 'auto', 
-    },
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const upload = multer({ storage: storage });
+// Use Memory Storage (Keeps file in RAM instead of disk)
+const upload = multer({ storage: multer.memoryStorage() });
+
+// --- HELPER FUNCTION TO UPLOAD TO CLOUDINARY ---
+const uploadToCloudinary = (req, res, next) => {
+    // If no file was sent, just skip to the controller
+    if (!req.file) return next();
+
+    console.log("🔹 Starting Manual Cloudinary Upload...");
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+        {
+            folder: 'college_notices',
+            resource_type: 'auto', // Handle PDFs and Images
+        },
+        (error, result) => {
+            if (error) {
+                console.error("🔴 Cloudinary Upload Error:", error);
+                return res.status(500).json({ msg: 'Cloudinary Error', error: error.message });
+            }
+            
+            console.log("✅ Cloudinary Upload Success:", result.secure_url);
+            
+            // IMPORTANT: We manually set the path so the Controller can read it
+            req.file.path = result.secure_url;
+            next();
+        }
+    );
+
+    // Pipe the file buffer from memory to Cloudinary
+    streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+};
 
 // --- ROUTES ---
 
 router.route('/')
     .get(protect, getNotices)
-    .post(protect, faculty, (req, res, next) => {
-        console.log("🔹 Attempting Upload...");
-        
-        const uploadMiddleware = upload.single('noticeFile');
-        
-        uploadMiddleware(req, res, function (err) {
-            if (err) {
-                console.error("🔴 UPLOAD ERROR DETAILS:", err);
-                return res.status(500).json({ msg: 'Upload Failed', error: err.message || err });
-            }
-            console.log("✅ Upload Success!");
-            next();
-        });
-    }, createNotice);
+    // 1. Multer grabs file -> 2. We upload to Cloudinary -> 3. Controller saves to DB
+    .post(protect, faculty, upload.single('noticeFile'), uploadToCloudinary, createNotice);
 
 router.route('/:id')
     .put(protect, admin, updateNotice)
