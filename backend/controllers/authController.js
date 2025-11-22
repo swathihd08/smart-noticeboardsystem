@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto'); // Built-in module for random tokens
+const crypto = require('crypto'); // Built-in module
 const nodemailer = require('nodemailer'); // Module for sending emails
 
 // Helper: Generate JWT Token
@@ -98,49 +98,59 @@ exports.getMe = async (req, res) => {
     }
 };
 
-// @desc    Forgot Password (Send Email)
+// @desc    Forgot Password (Send Email) - WITH DEBUG LOGS
 // @route   POST /api/auth/forgotpassword
 exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
+    
+    console.log("------------------------------------------------");
+    console.log("🔹 Forgot Password Request Received for:", email);
 
     try {
         const user = await User.findOne({ email });
         if (!user) {
+            console.log("❌ User NOT found in database.");
             return res.status(404).json({ msg: 'Email not found' });
         }
+
+        console.log("✅ User Found:", user.email);
 
         // 1. Generate a random reset token
         const resetToken = crypto.randomBytes(20).toString('hex');
 
-        // 2. Save token to DB (hashed for security in real apps, simple here)
+        // 2. Save token to DB
         user.resetPasswordToken = resetToken;
         user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // Expires in 10 mins
         await user.save();
+        console.log("✅ Reset Token Saved to Database");
 
         // 3. Create the Reset Link
-        // Note: We use FRONTEND_URL from .env so it works on Vercel too
-        // If FRONTEND_URL is missing, fallback to localhost
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
         const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
-        const message = `You requested a password reset. Please go to this link to reset your password:\n\n${resetUrl}\n\nThis link expires in 10 minutes.`;
+        const message = `You requested a password reset. Please go to this link to reset your password:\n\n${resetUrl}\n\nLink expires in 10 minutes.`;
 
         try {
+            console.log("🔹 Attempting to connect to Gmail...");
+            console.log("🔹 Using Email User:", process.env.EMAIL_USER); 
+            
             await sendEmail({
                 email: user.email,
                 subject: 'Password Reset Request',
                 message,
             });
+            
+            console.log("✅ EMAIL SENT SUCCESSFULLY!");
             res.status(200).json({ msg: 'Email sent' });
         } catch (err) {
-            console.error("Email send error:", err);
+            console.error("🔴 EMAIL SENDING FAILED:", err);
             user.resetPasswordToken = undefined;
             user.resetPasswordExpire = undefined;
             await user.save();
-            return res.status(500).json({ msg: 'Email could not be sent' });
+            return res.status(500).json({ msg: 'Email could not be sent', error: err.message });
         }
     } catch (err) {
-        console.error(err);
+        console.error("🔴 SERVER ERROR:", err);
         res.status(500).json({ msg: 'Server Error' });
     }
 };
