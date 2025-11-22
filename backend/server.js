@@ -7,7 +7,16 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const app = express();
+// --- DEBUGGING BLOCK ---
+console.log("---------------------------------------");
+console.log("🚀 SERVER STARTING...");
+console.log("✅ Cloudinary Cloud Name:", process.env.CLOUDINARY_CLOUD_NAME);
+console.log("✅ Cloudinary API Key Length:", process.env.CLOUDINARY_API_KEY ? process.env.CLOUDINARY_API_KEY.length : "MISSING");
+console.log("✅ Cloudinary Secret Length:", process.env.CLOUDINARY_API_SECRET ? process.env.CLOUDINARY_API_SECRET.length : "MISSING");
+console.log("---------------------------------------");
+// -----------------------
 
+// (Your mongoose.connect line is below here...)
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
