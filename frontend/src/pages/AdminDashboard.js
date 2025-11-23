@@ -10,7 +10,6 @@ const AdminDashboard = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [uploading, setUploading] = useState(false);
     
-    // Default state
     const [currentNotice, setCurrentNotice] = useState({ 
         _id: '', title: '', content: '', category: 'Academics' 
     });
@@ -64,6 +63,7 @@ const AdminDashboard = () => {
         }
     };
 
+    // --- SMART UPLOAD FUNCTION (FIXED FOR PDFS) ---
     const uploadFileToCloudinary = async () => {
         if (!file) return null;
 
@@ -72,11 +72,14 @@ const AdminDashboard = () => {
         formData.append('upload_preset', 'college_preset'); 
         formData.append('cloud_name', 'dyiz54vhg'); 
 
+        // SMART CHECK: If it's a PDF, use 'raw'. If it's an image, use 'auto'.
+        // 'raw' is safer for documents like PDFs, Docs, etc.
+        const resourceType = file.type.includes('pdf') ? 'raw' : 'auto';
+
         try {
             setUploading(true);
-            // Using 'auto' here lets Cloudinary decide if it's an image or raw PDF
             const res = await axios.post(
-                'https://api.cloudinary.com/v1_1/dyiz54vhg/auto/upload', 
+                `https://api.cloudinary.com/v1_1/dyiz54vhg/${resourceType}/upload`, 
                 formData
             );
             setUploading(false);
@@ -88,6 +91,7 @@ const AdminDashboard = () => {
             return null;
         }
     };
+    // ----------------------------------------------
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -185,7 +189,6 @@ const AdminDashboard = () => {
                                 <option>Placements</option>
                                 <option>Holidays</option>
                                 <option>Emergency Alerts</option>
-                                {/* --- NEW CATEGORIES --- */}
                                 <option>Sports</option>
                                 <option>Library</option>
                             </Form.Select>
