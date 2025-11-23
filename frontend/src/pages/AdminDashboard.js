@@ -8,8 +8,9 @@ const AdminDashboard = () => {
     const [notices, setNotices] = useState([]);
     const [show, setShow] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [uploading, setUploading] = useState(false); // Loading state
+    const [uploading, setUploading] = useState(false);
     
+    // Default state
     const [currentNotice, setCurrentNotice] = useState({ 
         _id: '', title: '', content: '', category: 'Academics' 
     });
@@ -63,23 +64,23 @@ const AdminDashboard = () => {
         }
     };
 
-    // --- NEW UPLOAD LOGIC ---
     const uploadFileToCloudinary = async () => {
         if (!file) return null;
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('upload_preset', 'college_preset'); // MUST MATCH YOUR CLOUDINARY SETTING
-        formData.append('cloud_name', 'dyiz54vhg'); // YOUR CLOUD NAME
+        formData.append('upload_preset', 'college_preset'); 
+        formData.append('cloud_name', 'dyiz54vhg'); 
 
         try {
             setUploading(true);
+            // Using 'auto' here lets Cloudinary decide if it's an image or raw PDF
             const res = await axios.post(
-                'https://api.cloudinary.com/v1_1/dyiz54vhg/auto/upload', // YOUR CLOUD URL
+                'https://api.cloudinary.com/v1_1/dyiz54vhg/auto/upload', 
                 formData
             );
             setUploading(false);
-            return res.data.secure_url; // Return the link
+            return res.data.secure_url;
         } catch (error) {
             setUploading(false);
             console.error("Cloudinary Upload Error:", error);
@@ -91,20 +92,18 @@ const AdminDashboard = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        let fileUrl = currentNotice.fileUrl; // Keep existing URL if editing
+        let fileUrl = currentNotice.fileUrl;
 
-        // 1. Upload File First (if selected)
         if (file) {
             fileUrl = await uploadFileToCloudinary();
-            if (!fileUrl) return; // Stop if upload failed
+            if (!fileUrl) return; 
         }
 
-        // 2. Send Data to Backend
         const noticeData = {
             title: currentNotice.title,
             content: currentNotice.content,
             category: currentNotice.category,
-            fileUrl: fileUrl // Send the link, not the file
+            fileUrl: fileUrl
         };
 
         const config = {
@@ -186,6 +185,7 @@ const AdminDashboard = () => {
                                 <option>Placements</option>
                                 <option>Holidays</option>
                                 <option>Emergency Alerts</option>
+                                {/* --- NEW CATEGORIES --- */}
                                 <option>Sports</option>
                                 <option>Library</option>
                             </Form.Select>
@@ -197,7 +197,7 @@ const AdminDashboard = () => {
                         
                         {!isEditing && (
                             <Form.Group className="mb-3">
-                                <Form.Label>Attach File</Form.Label>
+                                <Form.Label>Attach File (PDF/Image)</Form.Label>
                                 <Form.Control type="file" onChange={(e) => setFile(e.target.files[0])} />
                             </Form.Group>
                         )}

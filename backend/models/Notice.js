@@ -7,7 +7,7 @@ const NoticeSchema = new mongoose.Schema({
         type: String, 
         required: true, 
         // Updated list based on your request
-        enum: ['Academics', 'Events', 'Placements', 'Exams', 'Holidays', 'Emergency Alerts'], 
+        enum: ['Academics', 'Events', 'Placements', 'Exams', 'Holidays', 'Emergency Alerts','Sports','Library'], 
         default: 'Academics' 
     },
     // Add this field for file paths
