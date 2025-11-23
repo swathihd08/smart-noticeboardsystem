@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Form, Button, Container, Alert, Card } from 'react-bootstrap';
+import { Form, Button, Container, Alert } from 'react-bootstrap';
 import axios from 'axios';
+import emailjs from '@emailjs/browser';
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
-    const [demoLink, setDemoLink] = useState(''); // State to store the link
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -16,23 +16,34 @@ const ForgotPasswordPage = () => {
         setLoading(true);
         setMessage('');
         setError('');
-        setDemoLink('');
 
         try {
-            // 1. Ask Backend to generate a token
+            // 1. Ask Backend to generate a secure token
             const { data } = await axios.post(`${API_URL}/auth/forgotpassword`, { email });
             
-            // 2. Construct the Link manually in the frontend
+            // 2. Construct the Reset Link
             const resetLink = `${window.location.origin}/reset-password/${data.resetToken}`;
 
-            // --- DEMO MODE: Display link on screen instead of emailing ---
-            setMessage('Success! Since this is a demo, click the link below to reset:');
-            setDemoLink(resetLink);
-            // -------------------------------------------------------------
+            // 3. Prepare EmailJS Parameters (Must match your Template variables!)
+            const templateParams = {
+                to_email: email,       // Matches {{to_email}} in your template
+                reset_link: resetLink  // Matches {{reset_link}} in your template
+            };
 
+            // 4. Send the Email
+            await emailjs.send(
+                'service_qywmlqt',   // Paste Service ID from EmailJS
+                'template_0p5wzto',  // Paste Template ID from EmailJS
+                templateParams,
+                'fw5rAm6iJgU-vd77e'    // Paste Public Key (Account -> General)
+            );
+
+            setMessage('✅ Email sent successfully! Check your inbox.');
         } catch (err) {
             console.error(err);
-            setError('User not found.');
+            // Even if user not found, sometimes it's safer to show a generic message, 
+            // but for this project:
+            setError('User not found or failed to send email.');
         } finally {
             setLoading(false);
         }
@@ -42,28 +53,20 @@ const ForgotPasswordPage = () => {
         <Container className="mt-5">
             <h2>Forgot Password</h2>
             {error && <Alert variant="danger">{error}</Alert>}
-            
-            {/* Success Message */}
             {message && <Alert variant="success">{message}</Alert>}
-
-            {/* THE MAGIC LINK (Simulates the Email) */}
-            {demoLink && (
-                <Card className="mb-4 p-3 bg-light border-success">
-                    <h5>📧 Simulated Email Inbox</h5>
-                    <p>Subject: Password Reset Request</p>
-                    <hr />
-                    <p>Click this link to reset your password:</p>
-                    <a href={demoLink} className="btn btn-success">Reset Password Now</a>
-                </Card>
-            )}
-
+            
             <Form onSubmit={submitHandler}>
                 <Form.Group className="mb-3">
                     <Form.Label>Enter your registered email</Form.Label>
-                    <Form.Control type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <Form.Control 
+                        type="email" 
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)} 
+                        required 
+                    />
                 </Form.Group>
                 <Button variant="primary" type="submit" disabled={loading}>
-                    {loading ? 'Generating Link...' : 'Get Reset Link'}
+                    {loading ? 'Sending Email...' : 'Send Reset Link'}
                 </Button>
             </Form>
         </Container>
